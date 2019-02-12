@@ -1,0 +1,34 @@
+--- docker-entrypoint.sh.orig	2019-02-09 04:12:25.000000000 +0000
++++ docker-entrypoint.sh	2019-02-12 09:54:24.977000000 +0000
+@@ -205,10 +205,18 @@
+ 			fi
+ 			sed -ri -e "s/($start\s*).*($end)$/\1$(sed_escape_rhs "$(php_escape "$value" "$var_type")")\3/" wp-config.php
+ 		}
++		
++		set_env_config() {
++			key="$1"
++			envarname="$2"
++			start="(['\"])$(sed_escape_lhs "$key")\2\s*,"
++			end="\);"
++			sed -ri -e "s/($start\s*).*($end)$/\1getenv('$envarname')\3/" wp-config.php
++		}
+ 
+ 		set_config 'DB_HOST' "$WORDPRESS_DB_HOST"
+ 		set_config 'DB_USER' "$WORDPRESS_DB_USER"
+-		set_config 'DB_PASSWORD' "$WORDPRESS_DB_PASSWORD"
++		set_env_config 'DB_PASSWORD' 'WORDPRESS_DB_PASSWORD'
+ 		set_config 'DB_NAME' "$WORDPRESS_DB_NAME"
+ 		set_config 'DB_CHARSET' "$WORDPRESS_DB_CHARSET"
+ 		set_config 'DB_COLLATE' "$WORDPRESS_DB_COLLATE"
+@@ -276,11 +284,6 @@
+ $mysql->close();
+ EOPHP
+ 	fi
+-
+-	# now that we're definitely done writing configuration, let's clear out the relevant envrionment variables (so that stray "phpinfo()" calls don't leak secrets from our code)
+-	for e in "${envs[@]}"; do
+-		unset "$e"
+-	done
+ fi
+ 
+ exec "$@"
